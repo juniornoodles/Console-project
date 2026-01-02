@@ -3,7 +3,7 @@ All of the code that I produce to be used to create my own gaming console
 
 CPU specs:
 
-32 bit cpu
+32 bit cpu \n
 32 registers in register file
 524KB of RAM
 32KB of instruction storage
