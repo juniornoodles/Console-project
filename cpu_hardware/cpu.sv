@@ -6,7 +6,7 @@ January 5 2026
 module cpu(
     input logic clk,
     input logic reset,
-    input logic pause,
+    input logic pause, //pause and finish_debug are signals for debugging when ebreak is called. When pause is off the program goes through a cycle and when finish_debug is on then debug mode turns off
     input logic finish_debug
 );
 
@@ -273,5 +273,6 @@ initial begin
     // Either put a file here to read from or manually enter the contents of the PC memory and the RAM
 end
 endmodule
+
 
 
