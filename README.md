@@ -87,12 +87,16 @@ cpu instructions
 
 CPU Notes: 
 
-If loading or storing, always make reg1 zero
+AUIPC and ECALL currently don not do anything. This is because the PC is 13 bits and the immediate section of the instruction is 17 bits. As for ecall, I do not plan on making an OS, but I kept it in just in case I change my mind later.
 
-False is 0, true is anything else
+With shifts, positive values shift to the right, and negative values shift to the left.
 
-With branch instructions, it will check reg1, we do not care what rd is
+If loading or storing, always make reg1 zero.
 
-With jump and link, we do not care what reg1 is
+False is 0, true is anything else.
+
+With branch instructions, it will check reg1, we do not care what rd is.
+
+With jump and link, we do not care what reg1 is.
 
 
