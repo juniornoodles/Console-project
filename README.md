@@ -1,6 +1,8 @@
 # Console-project
 All of the code that I produce to be used to create my own gaming console
 
+
+
 CPU specs:
 
 
@@ -83,5 +85,14 @@ cpu instructions
 
 31-ENVIORNMENT BREAK
 
+CPU Notes: 
+
+If loading or storing, always make reg1 zero
+
+False is 0, true is anything else
+
+With branch instructions, it will check reg1, we do not care what rd is
+
+With jump and link, we do not care what reg1 is
 
 
