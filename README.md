@@ -100,3 +100,30 @@ With branch instructions, it will check reg1, we do not care what rd is.
 With jump and link, we do not care what reg1 is.
 
 
+# How to use Assembler
+
+The assembler I made is very rudimentry, I made it to make it easier to program the cpu, not for it to be used by others. However, I still think it is worth sharing.
+
+R types:  instr reg1, reg2, rd
+
+I types:  instr reg1, imm, rd
+
+Loads and Stores:  instr rd, imm
+
+branches:  instr reg1(test reg), label
+
+jal:  jal rd, label
+
+jalr:  jalr reg1, imm, rd
+
+ebreak:  ebreak
+
+To put labels, put a colon followed by the name of the label. You must put the label on the same line you want the instruction to jump to. For example:
+
+add 4, 3, 1 :here //This is a comment, even without the slashes this would still be a comment
+
+jal 2, here
+
+Anything written after the instruction (or after the label) on the same line is considered a comment.
+
+If you look at the assembler code, you will probably find work arounds to still assemble the machine code, which is fine if you'd like to do so. I just wanted to explain my intent with the assembler.
