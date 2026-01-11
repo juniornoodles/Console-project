@@ -12,7 +12,7 @@ module reg_file (
     input logic [31:0] wr_data,
     input logic write_en,
     output logic [31:0] rd1_data,
-    output logic [31:0] rd2_data,
+    output logic [31:0] rd2_data
 );
 assign rd1_data = rd1_addr == 0 ? 32'b0 : rd1_addr == wr_addr & write_en ? wr_data : registers[rd1_addr];
 assign rd2_data = rd2_addr == 0 ? 32'b0 : rd2_addr == wr_addr & write_en ? wr_data : registers[rd2_addr];
@@ -30,3 +30,4 @@ always_ff @(posedge clk or posedge reset) begin
 end
 
 endmodule
+
