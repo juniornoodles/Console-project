@@ -1,10 +1,15 @@
+/*
+Written by Chris Junior Tchapmou
+January 10 2026
+*/
+
 package software;
 import java.util.*;
 import java.io.*;
 
 public class Assembler {
-	private static final String INPUTFILE = "software/Code.txt"; //put assembly file name here
-	private static final String OUTPUTFILE ="cpu_hardware/file.txt"; //put machine code output file here
+	private static final String INPUTFILE = ""; //put assembly file name here
+	private static final String OUTPUTFILE =""; //put machine code output file here
 	private static int lineNum = 0;
 	
 	private static ArrayList<Branch> labels = new ArrayList<Branch>();
@@ -27,7 +32,7 @@ public class Assembler {
 			return;
 		}
 		int instruction = 0;
-		while(fileReader.hasNext()) {
+		while(fileReader.hasNext()) { // scans for labels first
 			String nextLine = fileReader.nextLine();
 			String[] tokens = nextLine.split(" ");
 			if(nextLine.equals("")) {
@@ -71,7 +76,7 @@ public class Assembler {
 		writer.close();
 	}
 	
-	public static String parse(String line, int instruction) throws Exception{
+	public static String parse(String line, int instruction) throws Exception{ //parses a line of assembly code into machine code
 		String[] tokens = line.split("\\s");
 		int tokenSize = tokens.length;
 		if(tokenSize == 0) {
@@ -313,7 +318,7 @@ public class Assembler {
 		throw new Exception("Line " + lineNum + " Malformed statement");
 	}
 	
-	public static String convertToBinary(int num, int size) {
+	public static String convertToBinary(int num, int size) { // converts an integer to a binary string of given size
 		String binaryNum = "";
 		if(num>=0) {
 			for(int i = 0; i < size; i++) {
