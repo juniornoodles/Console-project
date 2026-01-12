@@ -54,8 +54,12 @@ logic [16:0] not_predicted_offset_ID;
         not_predicted_offset_ID <= not_predicted_offset_ID;
         not_predicted_offset <= not_predicted_offset;
     end else begin
+        if (opcode == JAL) begin // If the branch prediction is wrong and a jal is executed, the pc is offset by he wrong ammount so it needs to be fixed
+            not_predicted_offset <= not_predicted_offset_ID - branch_target + 17'd1;
+        end else begin
+            not_predicted_offset <= not_predicted_offset_ID;
+        end
         not_predicted_offset_ID <= not_predicted_offset_IF;
-        not_predicted_offset <= not_predicted_offset_ID;
     end
 end
 
@@ -79,3 +83,4 @@ end
 
 
 endmodule
+
