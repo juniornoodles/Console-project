@@ -19,7 +19,7 @@ assign rd2_data = rd2_addr == 0 ? 32'b0 : rd2_addr == wr_addr & write_en ? wr_da
 logic [31:0] registers [31:0];
 always_ff @(posedge clk or posedge reset) begin
     if (reset) begin
-        for (int i = 11; i < 32; i++) begin
+        for (int i = 0; i < 32; i++) begin
             registers[i] <= 32'b0;
         end
        
@@ -29,5 +29,6 @@ always_ff @(posedge clk or posedge reset) begin
 end
 
 endmodule
+
 
 
