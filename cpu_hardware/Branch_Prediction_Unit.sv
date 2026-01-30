@@ -9,7 +9,6 @@ module Branch_Prediction_Unit(
     input logic halted,
     input logic [4:0] opcode,
     input logic [16:0] branch_target,
-    input logic guess_wrong,
     output logic [16:0] predicted_offset,
     output logic [16:0] not_predicted_offset
 );
@@ -46,12 +45,10 @@ localparam ADD = 5'd0,
            AUITPC = 5'd29,
            ECALL = 5'd30,
            EBREAK = 5'd31;
-logic [16:0] not_predicted_offset_IF;
 logic [16:0] not_predicted_offset_ID;
 
     always_ff @(posedge clk) begin // Here so if the branch prediction is wrong, the correct offset can be recovered
     if (stall | halted) begin
-        not_predicted_offset_ID <= not_predicted_offset_ID;
         not_predicted_offset <= not_predicted_offset;
     end else begin
         if (opcode == JAL) begin // If the branch prediction is wrong and a jal is executed, the pc is offset by he wrong ammount so it needs to be fixed
@@ -59,7 +56,6 @@ logic [16:0] not_predicted_offset_ID;
         end else begin
             not_predicted_offset <= not_predicted_offset_ID;
         end
-        not_predicted_offset_ID <= not_predicted_offset_IF;
     end
 end
 
@@ -67,20 +63,19 @@ always_comb begin
     if (opcode == BT || opcode == BF) begin
         if ($signed(branch_target) >= 0) begin //BTFNT prediction
             predicted_offset = 17'd1;
-            not_predicted_offset_IF = branch_target - 17'd2;
+            not_predicted_offset_ID = branch_target - 17'd2;
         end else begin
             predicted_offset = branch_target;
-            not_predicted_offset_IF = 17'd0 - branch_target;
+            not_predicted_offset_ID = 17'd0 - branch_target;
         end
     end else if (opcode == JAL) begin
         predicted_offset = branch_target;
-        not_predicted_offset_IF = 17'd0;
+        not_predicted_offset_ID = 17'd0;
     end else begin
         predicted_offset = 17'd1;
-        not_predicted_offset_IF = 17'd0;
+        not_predicted_offset_ID = 17'd0;
     end
 end
 
 
 endmodule
-
