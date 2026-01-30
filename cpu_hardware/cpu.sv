@@ -6,8 +6,9 @@ January 5 2026
 module cpu(
     input logic clk,
     input logic reset,
-    input logic pause, //pause and finish_debug are signals for debugging when ebreak is called. When pause is off the program goes through a cycle and when finish_debug is on then debug mode turns off
-    input logic finish_debug
+    input logic pause,
+    input logic finish_debug, //pause and finish_debug are signals for debugging when ebreak is called. When pause is off the program goes through a cycle and when finish_debug is on then debug mode turns off
+    output logic [31:0] reg1
 );
 
 localparam START_OF_PROGRAM = 13'h0000;
@@ -47,7 +48,6 @@ localparam ADD = 5'd0,
            EBREAK = 5'd31;
 localparam R_TYPE = 5'd10;
 logic [31:0] RAM [RAM_SIZE-1:0];
-logic [31:0] pc_mem [PC_SIZE-1:0]; 
 logic [12:0] pc = START_OF_PROGRAM;
 logic [31:0] instruction;
 logic [31:0] operand1;
@@ -83,6 +83,11 @@ logic [12:0] pc_ID;
 logic [12:0] pc_EX;
 logic halted;
 logic debug;
+logic [12:0] addr;
+logic [31:0] RAM_read_data;
+logic [31:0] mem_data_out;
+logic [4:0] writeback_op;
+    assign addr = flush ? (alu_op == JALR ? alu_result[12:0] : pc - 1 + not_predicted_offset ): pc - 1 + predicted_offset; // Logic to get the correct instruction from instruction memory
 alu alu_inst(
     .reg1(operand1),
     .reg2(operand2),
@@ -98,7 +103,8 @@ reg_file reg_file_inst(
     .rd1_addr(instruction[4:0] != SW  ? instruction[14:10] : instruction[9:5]), //Checks if it is a store to get contents from rd reg
     .rd2_addr(instruction[19:15]),
     .rd1_data(reg_read_addr1),
-    .rd2_data(reg_read_addr2)
+    .rd2_data(reg_read_addr2),
+    .reg1(reg1)
 );
 Hazard_unit hazard_unit_inst(
     .clk(clk),
@@ -120,21 +126,20 @@ Hazard_unit hazard_unit_inst(
 Branch_Prediction_Unit branch_prediction_unit_inst(
     .clk(clk),
     .stall(stall),
-    .opcode(pc_mem[pc][4:0]),
-    .branch_target(pc_mem[pc][31:15]),
-    .guess_wrong(flush),
+    .opcode(instruction[4:0]),
+    .branch_target(instruction[31:15]),
     .predicted_offset(predicted_offset),
     .not_predicted_offset(not_predicted_offset),
     .halted(halted)
 );
-Fetch_To_Decode fetch_to_decode_inst(
+pc_mem pc_mem_inst(
     .clk(clk),
     .reset(reset),
     .flush(flush),
+    .halted(halted),
     .stall(stall),
-    .instruction_in(pc_mem[pc]),
-    .instruction_out(instruction),
-    .halted(halted)
+    .addr(addr),
+    .read_data(instruction)
 );
 Decode_To_Execute decode_to_execute_inst(
     .clk(clk),
@@ -142,9 +147,9 @@ Decode_To_Execute decode_to_execute_inst(
     .stall(stall),
     .flush(flush),
     .operand1_in(operand1_in), 
-    .operand2_in(operand2_in),
+    .operand2_in(operand2_in), 
     .rd_in(instruction[9:5]),
-    .alu_op_in(instruction[4:0]),   
+    .alu_op_in(instruction[4:0]),  
     .operand1_out(decode_result1),
     .operand2_out(decode_result2),
     .alu_op_out(alu_op),   
@@ -170,9 +175,9 @@ always_ff @(posedge clk, posedge reset) begin
         pc <= START_OF_PROGRAM;
     end else if (flush) begin
         if(alu_op == JALR) begin
-            pc <= alu_result[12:0]; //Whatever is in the register plus the immidate value for the jump address
+            pc <= alu_result[12:0];
         end else begin
-            pc <= pc + not_predicted_offset; //If a flush is needed then the wrong branch outcome was predicted
+            pc <= pc + not_predicted_offset;
         end
     end else if (stall | halted) begin
         pc <= pc;
@@ -181,7 +186,7 @@ always_ff @(posedge clk, posedge reset) begin
     end
 end
 
-    always_ff @(posedge clk) begin //Here just so JAL and JALR can have the program instruction to store in a register
+always_ff @(posedge clk) begin
     if (!stall & !halted) begin
         pc_ID <= pc + 1;
         pc_EX <= pc_ID;
@@ -191,8 +196,10 @@ end
     end
 end
 
+
+
 //Decode stage
-    always_comb begin  //If it is an R type then take the contents of the 2 read port, otherwise its an immediate, take it from he instruction itself. Contains sign extending logic.
+always_comb begin  //If it is an R type then take the contents of the 2 read port, otherwise its an immediate, take it from he instruction itself. Contains sign extending logic.
     operand2_in = (instruction[4:0] <= R_TYPE ? reg_read_addr2 : (instruction[4:0] == ADDI | instruction[4:0] == ILT | instruction[4:0] == ILTI | instruction[4:0] == SLOG | instruction[4:0] == SLOGI | instruction[4:0] == SARI | instruction[4:0] == SARII | instruction[4:0] == BT | instruction[4:0] == BF | instruction[4:0] == JALR) & instruction[31] == 1 ? {{15{1'b1}},instruction[31:15]} : {{15{1'b0}},instruction[31:15]});
     operand1_in = reg_read_addr1;
 end
@@ -200,7 +207,7 @@ end
 
 //Execute stage
 assign operand1 = hazard1 ? forward_data1 : decode_result1;
-    assign operand2 = (alu_op == BT | alu_op == BF) ? 32'b0 : hazard2 ? forward_data2 : decode_result2; // If a branch instruction, set the second operand to 0 to check if it equals zero or not in the alu
+assign operand2 = (alu_op == BT | alu_op == BF) ? 32'b0 : hazard2 ? forward_data2 : decode_result2;
 always_comb begin
     if(alu_op == JALR) begin
         flush = 1'b1;
@@ -215,45 +222,55 @@ always_comb begin
     end
 end
 
-    always_ff @(posedge clk or posedge reset or posedge finish_debug) begin 
-    if(reset | (debug & finish_debug)) begin
-        debug = 1'b0;
-    end else if(alu_op == EBREAK) begin
-        debug = 1'b1;
+always_ff @(posedge clk or posedge reset or posedge finish_debug) begin
+    if(reset) begin
+        debug <= 1'b0;
+    end else if (finish_debug) begin
+        if (debug) begin
+            debug <= 1'b0;
+        end
+    end else if (alu_op == EBREAK) begin
+        debug <= 1'b1;
     end else begin
-        debug = debug;
+        debug <= debug;
     end
 end
 
 //Memory stage
 always_ff @(posedge clk) begin
+    RAM_read_data <= RAM[memaddr];
+    writeback_op <= mem_alu_op;
     if(!halted) begin
-        write_en = (mem_alu_op == SW | mem_alu_op == BT | mem_alu_op == BF | mem_alu_op == EBREAK) ? 1'b0 : 1'b1;
-        writeback_regaddr = writeback_regaddr_in;
-        if (mem_alu_op == LW ) begin
-            writeback_data = RAM[memaddr];
-        end else if (mem_alu_op == SW) begin
-            writeback_data = 32'b0;
-            RAM[memaddr] = memdata;
+        write_en <= (mem_alu_op == SW | mem_alu_op == BT | mem_alu_op == BF | mem_alu_op == EBREAK) ? 1'b0 : 1'b1;
+        writeback_regaddr <= writeback_regaddr_in;
+        if (mem_alu_op == SW) begin
+            mem_data_out <= 32'b0;
+            RAM[memaddr] <= memdata;
         end else if(mem_alu_op == LI) begin
-            writeback_data = {{15{1'b0}},memaddr};
+            mem_data_out <= {{15{1'b0}},memaddr};
         end else if(mem_alu_op == LUI) begin
-            writeback_data = {memaddr[14:0],17'b0};
+            mem_data_out <= {memaddr[14:0],17'b0};
         end else begin
-            writeback_data = memdata;
+            mem_data_out <= memdata;
         end
     end
     else begin
-        write_en = write_en;
-        writeback_regaddr = writeback_regaddr;
-        writeback_data = writeback_data;
+        write_en <= write_en;
+        writeback_regaddr <= writeback_regaddr;
+        mem_data_out <= mem_data_out;
+        writeback_op <= writeback_op;
     end
 end
+
+//Writeback stage
+
+assign writeback_data = (writeback_op == LW) ? RAM_read_data : mem_data_out;
+
 
 //debuging
 always_ff @(posedge clk or posedge reset) begin
     if(reset | !debug) begin
-        halted <= 1'b0; 
+        halted <= 1'b0;
     end else begin
         halted <= 1'b1; //If debug is on then everything halts, if the pause signal is off then the program goes through one cycle.
         if(!pause) begin
@@ -262,6 +279,28 @@ always_ff @(posedge clk or posedge reset) begin
     end
 end
 
+
+
+
+endmodule
+
+module top(
+    input logic clk,
+    input logic reset_low,
+    input logic pause,
+    input logic finish_debug, //Note that vivado will optimize this out because there is no output, you can decide what the output should be
+);
+    logic reset;
+    assign reset = ~reset_low; //Active low button
+    cpu cpu_inst(
+        .clk(clk),
+        .reset(reset),
+        .pause(pause),
+        .finish_debug(finish_debug),
+    );
+endmodule
+
+/* This is if you just want to simulate in the terminal and not implement it on an fpga
 initial begin
     integer i;
     for (i = 0; i < PC_SIZE; i = i + 1) begin
@@ -273,6 +312,4 @@ initial begin
     // Either put a file here to read from or manually enter the contents of the PC memory and the RAM
 end
 endmodule
-
-
-
+*/
