@@ -7,11 +7,10 @@ module cpu(
     input logic clk,
     input logic reset,
     input logic pause,
-    input logic finish_debug, 
+    input logic finish_debug
     //step and finish_debug are signals for debugging when ebreak is called.
     //The cpu detects the rising edge of step and allows one cycle to go through
     //When finish_debug is turned on, debug mode turns off
-    output logic [31:0] reg1
 );
 
 logic [20:0] i;
@@ -340,4 +339,5 @@ initial begin
 end
 endmodule
 */
+
 
