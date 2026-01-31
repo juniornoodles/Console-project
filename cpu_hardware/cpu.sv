@@ -7,9 +7,35 @@ module cpu(
     input logic clk,
     input logic reset,
     input logic pause,
-    input logic finish_debug, //pause and finish_debug are signals for debugging when ebreak is called. When pause is off the program goes through a cycle and when finish_debug is on then debug mode turns off
+    input logic finish_debug, 
+    //step and finish_debug are signals for debugging when ebreak is called.
+    //The cpu detects the rising edge of step and allows one cycle to go through
+    //When finish_debug is turned on, debug mode turns off
     output logic [31:0] reg1
 );
+
+logic [20:0] i;
+logic step_sync;
+logic step_prev;
+logic debounced_step;
+always_ff @(posedge clk) begin
+    if (step) begin
+        if(i != 21'h1FFFFF) begin 
+            i <= i + 1;
+        end else begin
+            i <= i;
+        end
+    end else begin
+        i <= 0;
+    end
+    if (i == 21'h1FFFFF) begin
+        step_sync <= 1'b1;
+    end else begin
+        step_sync <= 1'b0;
+    end
+    step_prev <= step_sync;
+end
+assign debounced_step = step_sync & ~step_prev; // Rising edge detector
 
 localparam START_OF_PROGRAM = 13'h0000;
 localparam RAM_SIZE = 131072;
@@ -268,13 +294,14 @@ assign writeback_data = (writeback_op == LW) ? RAM_read_data : mem_data_out;
 
 
 //debuging
-always_ff @(posedge clk or posedge reset) begin
+always_comb begin
     if(reset | !debug) begin
-        halted <= 1'b0;
+        halted = 1'b0;
     end else begin
-        halted <= 1'b1; //If debug is on then everything halts, if the pause signal is off then the program goes through one cycle.
-        if(!pause) begin
-            halted <= 1'b0;
+        if(debounced_step) begin
+            halted = 1'b0;
+        end else begin
+            halted = 1'b1;
         end
     end
 end
@@ -313,3 +340,4 @@ initial begin
 end
 endmodule
 */
+
