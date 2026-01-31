@@ -128,8 +128,7 @@ reg_file reg_file_inst(
     .rd1_addr(instruction[4:0] != SW  ? instruction[14:10] : instruction[9:5]), //Checks if it is a store to get contents from rd reg
     .rd2_addr(instruction[19:15]),
     .rd1_data(reg_read_addr1),
-    .rd2_data(reg_read_addr2),
-    .reg1(reg1)
+    .rd2_data(reg_read_addr2)
 );
 Hazard_unit hazard_unit_inst(
     .clk(clk),
@@ -339,5 +338,6 @@ initial begin
 end
 endmodule
 */
+
 
 
